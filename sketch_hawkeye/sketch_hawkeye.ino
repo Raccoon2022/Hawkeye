@@ -1,9 +1,10 @@
 
 // Will just be ESP32
-// to do:
+// To Do:
 /*
-
-
+-Creating setup code for sensors
+-Storing sensor data into  relevant variables so rocket logic works
+-Recording sensor data into a file on the SD card (I assume we're still trying to do it like last semester)
 */
 
 // Variables
@@ -19,10 +20,10 @@ data storage variable so that magnitude of acceleration function isn't called mu
 which might result in slightly different values
 */
 
-unsigned long time_margin = 0; // just a fudge/margin factor, as unlikely the esp32 will directly measure the exact time of apogee
-unsigned long time_since_launch = 0; // self explanatory
-unsigned long apogee_time = 0; // the time of apogee as calculated by OpenRocket
-unsigned long launch_time = 0; // self explanatory
+unsigned long time_margin = 0UL; // just a fudge/margin factor, as unlikely the esp32 will directly measure the exact time of apogee
+unsigned long time_since_launch = 0UL; // self explanatory
+unsigned long apogee_time = 0UL; // the time of apogee as calculated by OpenRocket
+unsigned long launch_time = 0UL; // self explanatory
 
 void setup() {
   // put your setup code here, to run once:
