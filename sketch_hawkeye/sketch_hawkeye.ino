@@ -5,7 +5,7 @@
 Parts/Sensor List:
 -Sparkfun 9DoF IMU ICM-20948 (I2C & SPI available)
 -HiLetgo Micro SD Card Adapter (SPI available)
--
+-"BMP390 Precision Barometric Pressure and Altimeter Sensor Upgrade Version for BMP280 BMP388 I2C SPI Interface+SH1.0mm 4P Cable"
 */
 
 // To Do:
@@ -14,6 +14,11 @@ Parts/Sensor List:
 -Storing sensor data into  relevant variables so rocket logic works
 -Recording sensor data into a file on the SD card (I assume we're still trying to do it like last semester)
 */
+
+//Importing libraries
+#include "ICM_20948.h" // IMU library
+#include <Adafruit_Sensor.h> // Supporting library for pressure sensor
+#include "Adafruit_BMP3XX.h" // Pressure sensor library
 
 // Variables
 int rocket_state = 0; // 0 is on pad, 1 is in flight
