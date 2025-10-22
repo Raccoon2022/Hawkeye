@@ -1,5 +1,13 @@
 
 // Will just be ESP32
+
+/*
+Parts/Sensor List:
+-Sparkfun 9DoF IMU ICM-20948 (I2C & SPI available)
+-HiLetgo Micro SD Card Adapter (SPI available)
+-
+*/
+
 // To Do:
 /*
 -Creating setup code for sensors
