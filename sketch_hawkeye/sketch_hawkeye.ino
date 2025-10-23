@@ -19,8 +19,24 @@ Parts/Sensor List:
 #include "ICM_20948.h" // IMU library
 #include <Adafruit_Sensor.h> // Supporting library for pressure sensor
 #include "Adafruit_BMP3XX.h" // Pressure sensor library
+#include <SPI.h> // communication library
+
+// Setting up SPI
+//#define SPI_CS 1 // Chip select pin
+//#define SPI_SCK 1 // Serial clock pin
+//#define SPI_CIPO 1 // Controller In Peripheral Out pin
+//#define SPI_COPI 1 // Controller Out Peripheral In pin
+
+#define SEALEVELPRESSURE_HPA (1013.25)
 
 // Variables
+
+//Adafruit_BMP3XX bmp(BMP_CS); // hardware SPI
+//Adafruit_BMP3XX bmp(BMP_CS, BMP_MOSI, BMP_MISO, BMP_SCK);  // Software SPI
+//ICM_20948_SPI myICM;
+
+//Need to figure out how to setup SPI
+
 int rocket_state = 0; // 0 is on pad, 1 is in flight
 
 double gravity = 9.8; // acceleration due to gravity in m/s^2
