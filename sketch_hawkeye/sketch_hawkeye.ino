@@ -22,33 +22,42 @@ Parts/Sensor List:
 #include <SPI.h> // communication library
 
 // Setting up SPI
-//#define SPI_CS 1 // Chip select pin
-//#define SPI_SCK 1 // Serial clock pin
-//#define SPI_CIPO 1 // Controller In Peripheral Out pin
-//#define SPI_COPI 1 // Controller Out Peripheral In pin
+#define SPI_CS_BARO 17 // Chip select pin
+#define SPI_CS_IMU 16 // Chip select pin
+#define SPI_SCK 18 // Serial clock pin
+#define SPI_CIPO 19 // Controller In Peripheral Out pin
+#define SPI_COPI 23 // Controller Out Peripheral In pin
+// Based off: https://www.reddit.com/r/esp32/comments/uai6xz/im_confused_about_the_spi_pins/, https://docs.espressif.com/projects/esp-idf/en/v5.1/esp32/hw-reference/esp32/get-started-devkitc.html
 
 #define SEALEVELPRESSURE_HPA (1013.25)
 
+#define SPI_PORT SPI
+
 // Variables
 
-//Adafruit_BMP3XX bmp(BMP_CS); // hardware SPI
+Adafruit_BMP3XX bmp(SPI_CS_BARO); // hardware SPI
 //Adafruit_BMP3XX bmp(BMP_CS, BMP_MOSI, BMP_MISO, BMP_SCK);  // Software SPI
-//ICM_20948_SPI myICM;
+ICM_20948_SPI myICM;
 
 //Need to figure out how to setup SPI
 
-int rocket_state = 0; // 0 is on pad, 1 is in flight
+
 
 double gravity = 9.8; // acceleration due to gravity in m/s^2
 double gravity_margin = 0.0; // same thing as time margin, but for gravity
 
+// Sensor output variables
 double accel_x = 0.0, accel_y = 0.0, accel_z = 0.0; // acceleration values
 double accel_strength = 0.0; 
 /*
 data storage variable so that magnitude of acceleration function isn't called multiple times per loop,
 which might result in slightly different values
 */
+float pressure = 0.0; // Note that this is in Celsius
+float temperature = 0.0; // Note that this is in Pascals, uncorrected
 
+// State of rocket variables
+int rocket_state = 0; // 0 is on pad, 1 is in flight
 unsigned long time_margin = 0UL; // just a fudge/margin factor, as unlikely the esp32 will directly measure the exact time of apogee
 unsigned long time_since_launch = 0UL; // self explanatory
 unsigned long apogee_time = 0UL; // the time of apogee as calculated by OpenRocket
@@ -56,12 +65,28 @@ unsigned long launch_time = 0UL; // self explanatory
 
 void setup() {
   // put your setup code here, to run once:
+  
+  //Barometer set-up (following example found here: https://learn.adafruit.com/adafruit-bmp388-bmp390-bmp3xx/arduino)
+  Serial.begin(115200);
+  while(!Serial);
+  if(!bmp.begin_SPI(SPI_CS_BARO)){
+    Serial.println("Could not find a valid BMP3 sensor, check wiring!");
+    while(1);
+  }
+  bmp.setTemperatureOversampling(BMP3_OVERSAMPLING_8X);
+  bmp.setPressureOversampling(BMP3_OVERSAMPLING_4X);
+  bmp.setIIRFilterCoeff(BMP3_IIR_FILTER_COEFF_3);
+  bmp.setOutputDataRate(BMP3_ODR_50_HZ);
+
+  SPI_PORT.begin();
+  myICM.begin(SPI_CS_IMU, SPI_PORT); //Hoping this works...set up between the IMU and Barometer is noticably different
 
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  
+  pressure = bmp.readPressure();
+  temperature = bmp.readTemperature();
   
   switch
     case 0:
