@@ -20,6 +20,7 @@ Parts/Sensor List:
 #include <Adafruit_Sensor.h> // Supporting library for pressure sensor
 #include "Adafruit_BMP3XX.h" // Pressure sensor library
 #include <SPI.h> // communication library
+// All libraries (except SPI which is a default Arduino library) must be installed for this to function properly
 
 // Setting up SPI
 #define SPI_CS_BARO 17 // Chip select pin
@@ -78,15 +79,39 @@ void setup() {
   bmp.setIIRFilterCoeff(BMP3_IIR_FILTER_COEFF_3);
   bmp.setOutputDataRate(BMP3_ODR_50_HZ);
 
+  /*IMU set-up: 
+  https://learn.sparkfun.com/tutorials/sparkfun-9dof-imu-icm-20948-breakout-hookup-guide
+  https://github.com/sparkfun/SparkFun_ICM-20948_ArduinoLibrary/blob/main/examples/PortableC/Example999_Portable/Example999_Portable.ino 
+  https://github.com/sparkfun/SparkFun_ICM-20948_ArduinoLibrary/blob/main/examples/Arduino/Example1_Basics/Example1_Basics.ino 
+  */
   SPI_PORT.begin();
+  bool initialized = false;
+  while(!initialized){
+    myICM.begin(SPI_CS_IMU, SPI_PORT);
+    Serial.print(F("Initialization of the sensor returned: "));
+    Serial.println(myICM.statusString());
+    if(myICM.status != ICM_20948_Stat_Ok){
+      Serial.println("Trying again...");
+      delay(500);
+    } else {
+      initialized = true;
+    }
+  }
   myICM.begin(SPI_CS_IMU, SPI_PORT); //Hoping this works...set up between the IMU and Barometer is noticably different
 
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
+  //Barometer data
   pressure = bmp.readPressure();
   temperature = bmp.readTemperature();
+
+  //IMU Data
+  if(myICM.dataReady()){
+    myICM.getAGMT();
+    delay(30);
+  }
   
   switch
     case 0:
