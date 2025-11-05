@@ -21,7 +21,9 @@ Parts/Sensor List:
 #include <Adafruit_Sensor.h> // Supporting library for pressure sensor
 #include "Adafruit_BMP3XX.h" // Pressure sensor library
 #include <SPI.h> // communication library
-#include <Wire.h>
+#include <Wire.h> // communication library
+#include <TinyGPSPlus.h> 
+#include <SoftwareSerial.h>
 // GPS translation Library needs to go here
 // All libraries (except SPI which is a default Arduino library) must be installed for this to function properly
 
@@ -37,11 +39,20 @@ Parts/Sensor List:
 
 #define SPI_PORT SPI
 
-// Variables
+//Defining ports for flexability reasons
+#define I2C_SDA_PIN 0
+#define I2C_SCL_PIN 1
+#define UART_TX 2
+#define UART_RX 3
+static const uint32_t GPSBaud = 4800;
 
+// Variables
+// Sensor objects
 Adafruit_BMP3XX bmp; // hardware SPI
 //Adafruit_BMP3XX bmp(BMP_CS, BMP_MOSI, BMP_MISO, BMP_SCK);  // Software SPI
 ICM_20948_I2C myICM;
+TinyGPSPlus gps;
+SoftwareSerial ss(UART_TX, UART_RX);
 
 //Need to figure out how to setup SPI
 
@@ -57,6 +68,7 @@ double accel_strength = 0.0;
 data storage variable so that magnitude of acceleration function isn't called multiple times per loop,
 which might result in slightly different values
 */
+double altitude = 0.0, lat = 0.0, longi = 0.0;
 float pressure = 0.0; // Note that this is in Celsius
 float temperature = 0.0; // Note that this is in Pascals, uncorrected
 
@@ -71,7 +83,7 @@ void setup() {
   // put your setup code here, to run once:
   
   //Barometer set-up (following example found here: https://learn.adafruit.com/adafruit-bmp388-bmp390-bmp3xx/arduino)
-  Serial.begin(115200);
+  Serial.begin(115200); // seems this is the same baud rate as the GPS library...that's nice
   while(!Serial);
   //hardware I2C https://randomnerdtutorials.com/getting-started-freenove-esp32-wrover-cam/
   if(!bmp.begin_I2C()){
@@ -108,6 +120,8 @@ void setup() {
     }
   }
 
+  //GPS setup
+  ss.begin(GPSBaud);
 }
 
 void loop() {
@@ -120,6 +134,22 @@ void loop() {
   if(myICM.dataReady()){
     myICM.getAGMT();
     delay(30);
+    // https://community.sparkfun.com/t/sparkfun-9dof-imu-breakout-icm-20948-compass/47457/2 
+    accel_x = myICM.accX();
+    accel_y = myICM.accY();
+    accel_z = myICM.accZ();
+  }
+
+  //GPS Data https://github.com/mikalhart/TinyGPSPlus/blob/master/examples/KitchenSink/KitchenSink.ino 
+  while(ss.available() > 0){
+    gps.encode(ss.read());
+  }
+  if(gps.location.isUpdated()){
+    lat = gps.location.lat();
+    longi = gps.location.longi();
+  }
+  if(gps.altitude.isUpdated()){
+    altitude = gps.altitude.meters();
   }
   
   switch
