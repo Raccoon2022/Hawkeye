@@ -21,6 +21,7 @@ Parts/Sensor List:
 #include <Adafruit_Sensor.h> // Supporting library for pressure sensor
 #include "Adafruit_BMP3XX.h" // Pressure sensor library
 #include <SPI.h> // communication library
+#include <Wire.h>
 // GPS translation Library needs to go here
 // All libraries (except SPI which is a default Arduino library) must be installed for this to function properly
 
@@ -38,9 +39,9 @@ Parts/Sensor List:
 
 // Variables
 
-Adafruit_BMP3XX bmp(SPI_CS_BARO); // hardware SPI
+Adafruit_BMP3XX bmp; // hardware SPI
 //Adafruit_BMP3XX bmp(BMP_CS, BMP_MOSI, BMP_MISO, BMP_SCK);  // Software SPI
-ICM_20948_SPI myICM;
+ICM_20948_I2C myICM;
 
 //Need to figure out how to setup SPI
 
@@ -72,7 +73,8 @@ void setup() {
   //Barometer set-up (following example found here: https://learn.adafruit.com/adafruit-bmp388-bmp390-bmp3xx/arduino)
   Serial.begin(115200);
   while(!Serial);
-  if(!bmp.begin_SPI(SPI_CS_BARO)){
+  //hardware I2C https://randomnerdtutorials.com/getting-started-freenove-esp32-wrover-cam/
+  if(!bmp.begin_I2C()){
     Serial.println("Could not find a valid BMP3 sensor, check wiring!");
     while(1);
   }
@@ -86,10 +88,16 @@ void setup() {
   https://github.com/sparkfun/SparkFun_ICM-20948_ArduinoLibrary/blob/main/examples/PortableC/Example999_Portable/Example999_Portable.ino 
   https://github.com/sparkfun/SparkFun_ICM-20948_ArduinoLibrary/blob/main/examples/Arduino/Example1_Basics/Example1_Basics.ino 
   */
-  SPI_PORT.begin();
+  //hopefully starting the wire here doesn't cause issues
+  Wire.begin();
+  Wire.setClock(400000);
+  myICM.begin(Wire, 1);
+  //bmp = 0x77 i2c address
+  //imu = 0x69
+  
   bool initialized = false;
   while(!initialized){
-    myICM.begin(SPI_CS_IMU, SPI_PORT);
+    myICM.begin(Wire, 1);
     Serial.print(F("Initialization of the sensor returned: "));
     Serial.println(myICM.statusString());
     if(myICM.status != ICM_20948_Stat_Ok){
@@ -99,7 +107,6 @@ void setup() {
       initialized = true;
     }
   }
-  myICM.begin(SPI_CS_IMU, SPI_PORT); //Hoping this works...set up between the IMU and Barometer is noticably different
 
 }
 
