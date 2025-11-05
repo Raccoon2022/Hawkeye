@@ -10,7 +10,7 @@ Parts/Sensor List:
 
 // To Do:
 /*
--Creating setup code for sensors
+-Reconfiguring setup code for sensors - IMU & Barometer can use I2C (have cables provided now) and only GPS needs UART
 -Storing sensor data into  relevant variables so rocket logic works
 -add functions to improve code readability (one for storing data from sensors in variables, the other writing them to a file)
 -Recording sensor data into a file on the SD card (I assume we're still trying to do it like last semester)
@@ -21,6 +21,7 @@ Parts/Sensor List:
 #include <Adafruit_Sensor.h> // Supporting library for pressure sensor
 #include "Adafruit_BMP3XX.h" // Pressure sensor library
 #include <SPI.h> // communication library
+// GPS translation Library needs to go here
 // All libraries (except SPI which is a default Arduino library) must be installed for this to function properly
 
 // Setting up SPI
