@@ -10,7 +10,6 @@ Parts/Sensor List:
 
 // To Do:
 /*
--Reconfiguring setup code for sensors - IMU & Barometer can use I2C (have cables provided now) and only GPS needs UART
 -Storing sensor data into  relevant variables so rocket logic works
 -add functions to improve code readability (one for storing data from sensors in variables, the other writing them to a file)
 -Recording sensor data into a file on the SD card (I assume we're still trying to do it like last semester)
