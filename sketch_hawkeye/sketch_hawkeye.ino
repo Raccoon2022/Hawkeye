@@ -6,13 +6,16 @@ Parts/Sensor List:
 -Sparkfun 9DoF IMU ICM-20948 (I2C & SPI available)
 -HiLetgo Micro SD Card Adapter (SPI available)
 -"BMP390 Precision Barometric Pressure and Altimeter Sensor Upgrade Version for BMP280 BMP388 I2C SPI Interface+SH1.0mm 4P Cable"
+-HGLRC M100 Mini GPS (think this is the right model)
 */
 
 // To Do:
 /*
--Storing sensor data into  relevant variables so rocket logic works
--add functions to improve code readability (one for storing data from sensors in variables, the other writing them to a file)
+-Add functions to improve code readability (one for storing data from sensors in variables, the other writing them to a file)
+-Full flesh out reading sensor data (currently not including IMU gyro and mag readings)
 -Recording sensor data into a file on the SD card (I assume we're still trying to do it like last semester)
+  -Limiting update rate to preserve SD space?
+-Add support for wireless data transmission
 */
 
 //Importing libraries
@@ -134,6 +137,7 @@ void loop() {
     myICM.getAGMT();
     delay(30);
     // https://community.sparkfun.com/t/sparkfun-9dof-imu-breakout-icm-20948-compass/47457/2 
+    // ? https://github.com/sparkfun/SparkFun_BNO080_Arduino_Library/issues/22 
     accel_x = myICM.accX();
     accel_y = myICM.accY();
     accel_z = myICM.accZ();
