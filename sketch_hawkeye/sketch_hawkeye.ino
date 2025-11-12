@@ -1,6 +1,6 @@
 
 // Will just be ESP32
-
+//Board: Freenove ESP32 Wrover
 /*
 Parts/Sensor List:
 -Sparkfun 9DoF IMU ICM-20948 (I2C & SPI available)
@@ -26,7 +26,8 @@ Parts/Sensor List:
 #include <Wire.h> // communication library
 #include <TinyGPSPlus.h> // GPS library
 #include <SoftwareSerial.h> // Supporting library for GPS
-// GPS translation Library needs to go here
+#include "sd_read_write.h" // Onboard SD card libraries
+#include "SD_MMC.h"
 /*
 NOTE: All libraries (except SPI which is a default Arduino library) must be installed for this to function properly
 */
@@ -52,9 +53,15 @@ NOTE: All libraries (except SPI which is a default Arduino library) must be inst
 #define UART_RX 3
 static const uint32_t GPSBaud = 4800;
 
+// https://docs.freenove.com/projects/fnk0060/en/latest/fnk0060/codes/C/30_Read_and_Write_the_Sdcard.html
+// https://github.com/Freenove/Freenove_ESP32_WROVER_Board/blob/main/C/Sketches/Sketch_03.1_SDMMC_Test/Sketch_03.1_SDMMC_Test.ino
+#define SD_MMC_CMD 15 //Please do not modify it.
+#define SD_MMC_CLK 14 //Please do not modify it. 
+#define SD_MMC_D0  2  //Please do not modify it.
+
 // Variables
 // Sensor objects
-Adafruit_BMP3XX bmp; // hardware SPI
+Adafruit_BMP3XX bmp; // Warning: this is currently configured for HARDWARE I2C
 //Adafruit_BMP3XX bmp(BMP_CS, BMP_MOSI, BMP_MISO, BMP_SCK);  // Software SPI
 ICM_20948_I2C myICM;
 TinyGPSPlus gps;
@@ -130,6 +137,32 @@ void setup() {
 
   //GPS setup
   ss.begin(GPSBaud);
+
+  //Onboard SD Card setup (pasted from GitHub repository)
+  SD_MMC.setPins(SD_MMC_CLK, SD_MMC_CMD, SD_MMC_D0);
+  if (!SD_MMC.begin("/sdcard", true, true, SDMMC_FREQ_DEFAULT, 5)) {
+    Serial.println("Card Mount Failed");
+    return;
+  }
+  uint8_t cardType = SD_MMC.cardType();
+  if(cardType == CARD_NONE){
+    Serial.println("No SD_MMC card attached");
+    return;
+  }
+
+  Serial.print("SD_MMC Card Type: ");
+  if(cardType == CARD_MMC){
+    Serial.println("MMC");
+  } else if(cardType == CARD_SD){
+    Serial.println("SDSC");
+  } else if(cardType == CARD_SDHC){
+    Serial.println("SDHC");
+  } else {
+    Serial.println("UNKNOWN");
+  }
+
+  createDir(SD_MMC, "/datafiles");
+  writeFile(SD_MMC, "/datalog.txt", "test\n");
 }
 
 void loop() {
@@ -157,6 +190,7 @@ void loop() {
     case 1:
       accel_strength = magnitude_accel();
       time_since_launch = millis() - launch_time;
+      record_data();
       /* 
       Apogee detection code.
       If statements were nested (instead of in line like the pseudo-code) to improve readability.
@@ -219,4 +253,13 @@ void sensor_read(){
   if(gps.altitude.isUpdated()){
     altitude = gps.altitude.meters();
   }
+}
+
+void record_data(){
+  //Recording sensor data to SD Card
+  appendFile(SD_MMC, "/datalog.txt", "a: "+accel_x+", "+accel_y+", "+accel_z+" | gy: "+gyro_x+", "+gyro_y+", "+gyro_z+" | mag: "+magno_x+", "+magno_y+", "+magno_z+" | ");
+  appendFile(SD_MMC, "/datalog.txt", "pressr: "+pressure+" | "+"temp"+", "+temperature+" | "+"gps: "+altitude+", "+lat+", "+longi+"\n");
+
+  //Transmitting data to laptop
+
 }
