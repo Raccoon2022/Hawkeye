@@ -4,9 +4,10 @@
 /*
 Parts/Sensor List:
 -Sparkfun 9DoF IMU ICM-20948 (I2C & SPI available)
--HiLetgo Micro SD Card Adapter (SPI available)
+-Using ESP32's on board SD card slot
 -"BMP390 Precision Barometric Pressure and Altimeter Sensor Upgrade Version for BMP280 BMP388 I2C SPI Interface+SH1.0mm 4P Cable"
 -HGLRC M100 Mini GPS (think this is the right model)
+-REYAX RYLR999 Transciever
 */
 
 // To Do:
@@ -18,28 +19,32 @@ Parts/Sensor List:
 -Add support for wireless data transmission
 */
 
-//Importing libraries
+// Libraries
 #include "ICM_20948.h" // IMU library
 #include <Adafruit_Sensor.h> // Supporting library for pressure sensor
 #include "Adafruit_BMP3XX.h" // Pressure sensor library
-#include <SPI.h> // communication library
+// #include <SPI.h> // communication library (deprecated)
 #include <Wire.h> // communication library
-#include <TinyGPSPlus.h> 
-#include <SoftwareSerial.h>
+#include <TinyGPSPlus.h> // GPS library
+#include <SoftwareSerial.h> // Supporting library for GPS
 // GPS translation Library needs to go here
-// All libraries (except SPI which is a default Arduino library) must be installed for this to function properly
+/*
+NOTE: All libraries (except SPI which is a default Arduino library) must be installed for this to function properly
+*/
 
 // Setting up SPI
+/*
 #define SPI_CS_BARO 17 // Chip select pin
 #define SPI_CS_IMU 16 // Chip select pin
 #define SPI_SCK 18 // Serial clock pin
 #define SPI_CIPO 19 // Controller In Peripheral Out pin
 #define SPI_COPI 23 // Controller Out Peripheral In pin
+*/
 // Based off: https://www.reddit.com/r/esp32/comments/uai6xz/im_confused_about_the_spi_pins/, https://docs.espressif.com/projects/esp-idf/en/v5.1/esp32/hw-reference/esp32/get-started-devkitc.html
 
 #define SEALEVELPRESSURE_HPA (1013.25)
 
-#define SPI_PORT SPI
+// #define SPI_PORT SPI
 
 //Defining ports for flexability reasons
 #define I2C_SDA_PIN 0
@@ -64,15 +69,16 @@ double gravity = 9.8; // acceleration due to gravity in m/s^2
 double gravity_margin = 0.0; // same thing as time margin, but for gravity
 
 // Sensor output variables
-double accel_x = 0.0, accel_y = 0.0, accel_z = 0.0; // acceleration values
-double accel_strength = 0.0; 
-/*
-data storage variable so that magnitude of acceleration function isn't called multiple times per loop,
-which might result in slightly different values
-*/
-double altitude = 0.0, lat = 0.0, longi = 0.0;
-float pressure = 0.0; // Note that this is in Celsius
-float temperature = 0.0; // Note that this is in Pascals, uncorrected
+  // NOTE: I do not know the units of any of the data coming out of the IMU at the moment.
+double accel_x = 0.0, accel_y = 0.0, accel_z = 0.0, accel_strength = 0.0;
+// accel_strength is a data storage variable so that 
+// magnitude of acceleration function isn't called multiple times per loop,
+// which might result in slightly different values
+double gyro_x = 0.0, gyro_y = 0.0, gyro_z = 0.0; 
+double magno_x = 0.0, magno_y = 0.0, magno_z = 0.0;
+
+double altitude = 0.0, lat = 0.0, longi = 0.0; // gps values
+float pressure = 0.0, temperature = 0.0; // Note that temperature is in Celsius and pressure is in Pascals (uncorrected)
 
 // State of rocket variables
 int rocket_state = 0; // 0 is on pad, 1 is in flight
@@ -128,32 +134,10 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  //Barometer data
-  pressure = bmp.readPressure();
-  temperature = bmp.readTemperature();
 
-  //IMU Data
-  if(myICM.dataReady()){
-    myICM.getAGMT();
-    delay(30);
-    // https://community.sparkfun.com/t/sparkfun-9dof-imu-breakout-icm-20948-compass/47457/2 
-    // ? https://github.com/sparkfun/SparkFun_BNO080_Arduino_Library/issues/22 
-    accel_x = myICM.accX();
-    accel_y = myICM.accY();
-    accel_z = myICM.accZ();
-  }
+  sensor_read();
 
-  //GPS Data https://github.com/mikalhart/TinyGPSPlus/blob/master/examples/KitchenSink/KitchenSink.ino 
-  while(ss.available() > 0){
-    gps.encode(ss.read());
-  }
-  if(gps.location.isUpdated()){
-    lat = gps.location.lat();
-    longi = gps.location.longi();
-  }
-  if(gps.altitude.isUpdated()){
-    altitude = gps.altitude.meters();
-  }
+
   
   switch
     case 0:
@@ -199,4 +183,40 @@ void loop() {
 
 double magnitude_accel(){
   return 0.0;
+}
+
+void sensor_read(){
+  //Barometer data
+  pressure = bmp.readPressure();
+  temperature = bmp.readTemperature();
+
+    //IMU Data
+  if(myICM.dataReady()){
+    myICM.getAGMT();
+    delay(30);
+    // https://community.sparkfun.com/t/sparkfun-9dof-imu-breakout-icm-20948-compass/47457/2 
+    // ? https://github.com/sparkfun/SparkFun_BNO080_Arduino_Library/issues/22 
+    // https://jeremyclark.ca/wp/nav/icm20948-9dof-imu-on-arduino-uno/
+    accel_x = myICM.accX();
+    accel_y = myICM.accY();
+    accel_z = myICM.accZ();
+    gyro_x = myICM.gyrX();
+    gyro_y = myICM.gyrY();
+    gyro_z = myICM.gyrZ();
+    magno_x = myICM.magX();
+    magno_y = myICM.magY();
+    magno_z = myICM.magZ();
+  }
+
+  //GPS Data https://github.com/mikalhart/TinyGPSPlus/blob/master/examples/KitchenSink/KitchenSink.ino 
+  while(ss.available() > 0){
+    gps.encode(ss.read());
+  }
+  if(gps.location.isUpdated()){
+    lat = gps.location.lat();
+    longi = gps.location.longi();
+  }
+  if(gps.altitude.isUpdated()){
+    altitude = gps.altitude.meters();
+  }
 }
