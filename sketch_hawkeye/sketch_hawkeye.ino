@@ -13,7 +13,6 @@ Parts/Sensor List:
 // To Do:
 /*
 -Add functions to improve code readability (one for storing data from sensors in variables, the other writing them to a file)
--Full flesh out reading sensor data (currently not including IMU gyro and mag readings)
 -Recording sensor data into a file on the SD card (I assume we're still trying to do it like last semester)
   -Limiting update rate to preserve SD space?
 -Add support for wireless data transmission
@@ -70,6 +69,7 @@ double gravity_margin = 0.0; // same thing as time margin, but for gravity
 
 // Sensor output variables
   // NOTE: I do not know the units of any of the data coming out of the IMU at the moment.
+  // I am also assuming all data being outputs are either doubles or compatible with doubles
 double accel_x = 0.0, accel_y = 0.0, accel_z = 0.0, accel_strength = 0.0;
 // accel_strength is a data storage variable so that 
 // magnitude of acceleration function isn't called multiple times per loop,
@@ -182,7 +182,7 @@ void loop() {
 }
 
 double magnitude_accel(){
-  return 0.0;
+  return sqrt(sq(accel_x) + sq(accel_y) + sq(accel_z));
 }
 
 void sensor_read(){
