@@ -7,15 +7,13 @@ Parts/Sensor List:
 -Using ESP32's on board SD card slot
 -"BMP390 Precision Barometric Pressure and Altimeter Sensor Upgrade Version for BMP280 BMP388 I2C SPI Interface+SH1.0mm 4P Cable"
 -HGLRC M100 Mini GPS (think this is the right model)
--REYAX RYLR999 Transciever
+-REYAX RYLR998 Transciever
 */
 
 // To Do:
 /*
--Add functions to improve code readability (one for storing data from sensors in variables, the other writing them to a file)
--Recording sensor data into a file on the SD card (I assume we're still trying to do it like last semester)
-  -Limiting update rate to preserve SD space?
 -Add support for wireless data transmission
+-Landing detection?
 */
 
 // Libraries
@@ -49,9 +47,12 @@ NOTE: All libraries (except SPI which is a default Arduino library) must be inst
 //Defining ports for flexability reasons
 #define I2C_SDA_PIN 0
 #define I2C_SCL_PIN 1
-#define UART_TX 2
-#define UART_RX 3
+#define GPS_UART_TX 9
+#define GPS_UART_RX 3
 static const uint32_t GPSBaud = 4800;
+#define FUSE_TRIGGER_PIN 4
+//#define CAMERA_TRIGGER_TX 5 just going to run camera on it's own
+//#define CAMERA_TRIGGER_RX 6
 
 // https://docs.freenove.com/projects/fnk0060/en/latest/fnk0060/codes/C/30_Read_and_Write_the_Sdcard.html
 // https://github.com/Freenove/Freenove_ESP32_WROVER_Board/blob/main/C/Sketches/Sketch_03.1_SDMMC_Test/Sketch_03.1_SDMMC_Test.ino
@@ -65,7 +66,7 @@ Adafruit_BMP3XX bmp; // Warning: this is currently configured for HARDWARE I2C
 //Adafruit_BMP3XX bmp(BMP_CS, BMP_MOSI, BMP_MISO, BMP_SCK);  // Software SPI
 ICM_20948_I2C myICM;
 TinyGPSPlus gps;
-SoftwareSerial ss(UART_TX, UART_RX);
+SoftwareSerial ss(GPS_UART_TX, GPS_UART_RX);
 
 //Need to figure out how to setup SPI
 
@@ -163,6 +164,11 @@ void setup() {
 
   createDir(SD_MMC, "/datafiles");
   writeFile(SD_MMC, "/datalog.txt", "test\n");
+
+  // Setting up fuse trigger
+  pinMode(FUSE_TRIGGER_PIN, OUTPUT);
+
+
 }
 
 void loop() {
@@ -174,6 +180,8 @@ void loop() {
   
   switch
     case 0:
+      // Delay to allow for set up time
+      delay(300000);
       accel_strength = magnitude_accel();
       /*
       Launch detection code.
@@ -204,6 +212,7 @@ void loop() {
         if( (time_since_launch >= (apogee_time - time_margin)) && (time_since_launch <= (apogee_time + time_margin)) ){
           // trigger camera and parachute deployment mechanism
           rocket_state = 2;
+          digitalWrite(FUSE_TRIGGER_PIN, HIGH);
         }
       }
       break;
