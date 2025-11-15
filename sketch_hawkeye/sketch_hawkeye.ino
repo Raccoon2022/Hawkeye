@@ -13,7 +13,19 @@ Parts/Sensor List:
 // To Do:
 /*
 -Add support for wireless data transmission
+  -https://reyax.com//upload/products_download/download_file/RYLR998_EN.pdf 
+  -https://www.instructables.com/LoRa-Distance-Testing-With-RYLR998-in-Open-Field-A/ 
+  -https://docs.arduino.cc/learn/communication/lorawan-101/
+  -https://forum.arduino.cc/t/reyax-rylr998-lora-module/1022489/9
+  -https://forum.arduino.cc/t/interfacing-reyax-rylr896-with-software-serial/676797 
+  -https://www.pjrc.com/teensy/td_libs_AltSoftSerial.html
+  -https://github.com/PaulStoffregen/AltSoftSerial/blob/master/examples/ReceiveTest/ReceiveTest.ino
+  -https://projecthub.arduino.cc/Dziubym/how-to-use-rylr998-lora-module-with-arduino-496504 
+  -https://github.com/bkolicoski/rylr998-lora-distance-test/blob/main/device_2/device_2.ino 
+  -How to Use RYLR998 LoRa Modules with ESP32 https://www.youtube.com/watch?v=DOtZwD23ePQ
 -Landing detection?
+-Simplify apogee logic?
+-Create new sketch file for reciever
 */
 
 // Libraries
@@ -26,6 +38,7 @@ Parts/Sensor List:
 #include <SoftwareSerial.h> // Supporting library for GPS
 #include "sd_read_write.h" // Onboard SD card libraries
 #include "SD_MMC.h"
+#include <AltSoftSerial.h>
 /*
 NOTE: All libraries (except SPI which is a default Arduino library) must be installed for this to function properly
 */
@@ -53,6 +66,8 @@ static const uint32_t GPSBaud = 4800;
 #define FUSE_TRIGGER_PIN 4
 //#define CAMERA_TRIGGER_TX 5 just going to run camera on it's own
 //#define CAMERA_TRIGGER_RX 6
+#define LORA_UART_TX 10
+#define LORA_UART_RX 11
 
 // https://docs.freenove.com/projects/fnk0060/en/latest/fnk0060/codes/C/30_Read_and_Write_the_Sdcard.html
 // https://github.com/Freenove/Freenove_ESP32_WROVER_Board/blob/main/C/Sketches/Sketch_03.1_SDMMC_Test/Sketch_03.1_SDMMC_Test.ino
@@ -67,6 +82,8 @@ Adafruit_BMP3XX bmp; // Warning: this is currently configured for HARDWARE I2C
 ICM_20948_I2C myICM;
 TinyGPSPlus gps;
 SoftwareSerial ss(GPS_UART_TX, GPS_UART_RX);
+AltSoftSerial lora_serial(LORA_UART_TX, LORA_UART_RX);
+
 
 //Need to figure out how to setup SPI
 
@@ -77,7 +94,7 @@ double gravity_margin = 0.0; // same thing as time margin, but for gravity
 
 // Sensor output variables
   // NOTE: I do not know the units of any of the data coming out of the IMU at the moment.
-  // I am also assuming all data being outputs are either doubles or compatible with doubles
+  // Based on looking at each library's .h files, all outputs are either floats or doubles, so using doubles for everything.
 double accel_x = 0.0, accel_y = 0.0, accel_z = 0.0, accel_strength = 0.0;
 // accel_strength is a data storage variable so that 
 // magnitude of acceleration function isn't called multiple times per loop,
@@ -168,6 +185,10 @@ void setup() {
   // Setting up fuse trigger
   pinMode(FUSE_TRIGGER_PIN, OUTPUT);
 
+  //Setting up wireless communication
+  //lora_serial.begin(115200);
+  Serial2.begin(115200, SERIAL_8N1, LORA_UART_RX, LORA_UART_TX);
+
 
 }
 
@@ -191,6 +212,7 @@ void loop() {
       The launch time is also set; it is needed for calculations in case/rocket state 2.
       */
       if ( (accel_strength < (gravity - gravity_margin)) || (accel_strength > (gravity + gravity_margin)) ){
+        Serial.print("Launch initiated!");
         launch_time = millis();
         rocket_state = 1;
       }
@@ -211,6 +233,7 @@ void loop() {
         // If acceleration is roughly equal to gravity, then checks if time falls within range of expected apogee time +- an error margin.
         if( (time_since_launch >= (apogee_time - time_margin)) && (time_since_launch <= (apogee_time + time_margin)) ){
           // trigger camera and parachute deployment mechanism
+          Serial.print("Apogee detected!");
           rocket_state = 2;
           digitalWrite(FUSE_TRIGGER_PIN, HIGH);
         }
@@ -270,5 +293,9 @@ void record_data(){
   appendFile(SD_MMC, "/datalog.txt", "pressr: "+pressure+" | "+"temp"+", "+temperature+" | "+"gps: "+altitude+", "+lat+", "+longi+"\n");
 
   //Transmitting data to laptop
+
+}
+
+void data_transmit(){
 
 }
