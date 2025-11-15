@@ -188,7 +188,12 @@ void setup() {
   //Setting up wireless communication
   //lora_serial.begin(115200);
   Serial2.begin(115200, SERIAL_8N1, LORA_UART_RX, LORA_UART_TX);
-
+  //not adding delays here because why?
+  Serial2.println("AT+ADDRESS=1");
+  Serial2.println("AT+NETWORKID=5");
+  Serial2.println("AT+BAND?");
+  Serial2.println("AT+PARAMETER=5,9,1,12"); //This should maximize data throughput; expected data rate of 62.5kbps (kilobits per second)
+  Serial2.println("AT+MODE?");
 
 }
 
@@ -221,6 +226,7 @@ void loop() {
       accel_strength = magnitude_accel();
       time_since_launch = millis() - launch_time;
       record_data();
+      data_transmit();
       /* 
       Apogee detection code.
       If statements were nested (instead of in line like the pseudo-code) to improve readability.
@@ -289,13 +295,15 @@ void sensor_read(){
 
 void record_data(){
   //Recording sensor data to SD Card
-  appendFile(SD_MMC, "/datalog.txt", "a: "+accel_x+", "+accel_y+", "+accel_z+" | gy: "+gyro_x+", "+gyro_y+", "+gyro_z+" | mag: "+magno_x+", "+magno_y+", "+magno_z+" | ");
-  appendFile(SD_MMC, "/datalog.txt", "pressr: "+pressure+" | "+"temp"+", "+temperature+" | "+"gps: "+altitude+", "+lat+", "+longi+"\n");
-
-  //Transmitting data to laptop
-
+  appendFile(SD_MMC, "/datalog.txt", "a: "+accel_x+", "+accel_y+", "+accel_z+" gy: "+gyro_x+", "+gyro_y+", "+gyro_z+" mag: "+magno_x+", "+magno_y+", "+magno_z+" ");
+  appendFile(SD_MMC, "/datalog.txt", "pressr: "+pressure+" "+" temp: "+temperature+" gps: "+altitude+", "+lat+", "+longi+"\n");
 }
 
 void data_transmit(){
+  //Transmitting data to receiver
+  String data = String(accel_x)+","+String(accel_y)+","+String(accel_z)+","+String(gyro_x_x)+","+String(gyro_y)+","+String(gyro_z)+","+String(accel_x)+","+
+  String(magno_x)+","+String(magno_y)+","+String(magno_z)+","+String(altitude)+","+String(lat)+","+String(longi)+","+String(temperature)+","+String(pressure);
+  String data_length = String(data.length());
+  Serial2.println("AT+SEND=2,"+data_length+","+data);
 
 }
