@@ -12,7 +12,7 @@ Parts/Sensor List:
 
 // To Do:
 /*
--Add support for wireless data transmission
+Wireless data transmission
   -https://reyax.com//upload/products_download/download_file/RYLR998_EN.pdf 
   -https://www.instructables.com/LoRa-Distance-Testing-With-RYLR998-in-Open-Field-A/ 
   -https://docs.arduino.cc/learn/communication/lorawan-101/
@@ -23,9 +23,8 @@ Parts/Sensor List:
   -https://projecthub.arduino.cc/Dziubym/how-to-use-rylr998-lora-module-with-arduino-496504 
   -https://github.com/bkolicoski/rylr998-lora-distance-test/blob/main/device_2/device_2.ino 
   -How to Use RYLR998 LoRa Modules with ESP32 https://www.youtube.com/watch?v=DOtZwD23ePQ
--Landing detection?
 -Simplify apogee logic?
--Create new sketch file for reciever
+-Stick with current rocket state logic or switch to state change via wireless communication (turning off and on data recording wirelessly)?
 */
 
 // Libraries
@@ -58,16 +57,16 @@ NOTE: All libraries (except SPI which is a default Arduino library) must be inst
 // #define SPI_PORT SPI
 
 //Defining ports for flexability reasons
-#define I2C_SDA_PIN 0
-#define I2C_SCL_PIN 1
-#define GPS_UART_TX 9
-#define GPS_UART_RX 3
+//#define I2C_SDA_PIN 0
+//#define I2C_SCL_PIN 1
+#define GPS_UART_TX 13
+#define GPS_UART_RX 15
 static const uint32_t GPSBaud = 4800;
-#define FUSE_TRIGGER_PIN 4
+#define FUSE_TRIGGER_PIN 33
 //#define CAMERA_TRIGGER_TX 5 just going to run camera on it's own
 //#define CAMERA_TRIGGER_RX 6
-#define LORA_UART_TX 10
-#define LORA_UART_RX 11
+#define LORA_UART_TX 27
+#define LORA_UART_RX 32
 
 // https://docs.freenove.com/projects/fnk0060/en/latest/fnk0060/codes/C/30_Read_and_Write_the_Sdcard.html
 // https://github.com/Freenove/Freenove_ESP32_WROVER_Board/blob/main/C/Sketches/Sketch_03.1_SDMMC_Test/Sketch_03.1_SDMMC_Test.ino
