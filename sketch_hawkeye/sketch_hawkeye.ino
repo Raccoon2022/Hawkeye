@@ -301,7 +301,7 @@ void record_data(){
 
 void data_transmit(){
   //Transmitting data to receiver
-  String data = String(accel_x)+","+String(accel_y)+","+String(accel_z)+","+String(gyro_x_x)+","+String(gyro_y)+","+String(gyro_z)+","+String(accel_x)+","+
+  String data = String(accel_x)+","+String(accel_y)+","+String(accel_z)+","+String(gyro_x)+","+String(gyro_y)+","+String(gyro_z)+","+
   String(magno_x)+","+String(magno_y)+","+String(magno_z)+","+String(altitude)+","+String(lat)+","+String(longi)+","+String(temperature)+","+String(pressure);
   String data_length = String(data.length());
   Serial2.println("AT+SEND=2,"+data_length+","+data);
