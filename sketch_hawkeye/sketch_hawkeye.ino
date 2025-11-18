@@ -23,8 +23,7 @@ Wireless data transmission
   -https://projecthub.arduino.cc/Dziubym/how-to-use-rylr998-lora-module-with-arduino-496504 
   -https://github.com/bkolicoski/rylr998-lora-distance-test/blob/main/device_2/device_2.ino 
   -How to Use RYLR998 LoRa Modules with ESP32 https://www.youtube.com/watch?v=DOtZwD23ePQ
--Simplify apogee logic?
--Stick with current rocket state logic or switch to state change via wireless communication (turning off and on data recording wirelessly)?
+-Turn off data recording (switch to rocket state 2) when altitude is back at 0?
 */
 
 // Libraries
@@ -105,12 +104,13 @@ double altitude = 0.0, lat = 0.0, longi = 0.0; // gps values
 float pressure = 0.0, temperature = 0.0; // Note that temperature is in Celsius and pressure is in Pascals (uncorrected)
 
 // State of rocket variables
-int rocket_state = 0; // 0 is on pad, 1 is in flight
+int rocket_state = 0; // 0 is on pad, 1 is in flight (ascent), 2 is in flight (descent), 3 is landed
 //unsigned long time_margin = 0UL; // just a fudge/margin factor, as unlikely the esp32 will directly measure the exact time of apogee
 //Deciding to forgoe time_margin because in theory might miss this window and late is better than never
 unsigned long time_since_launch = 0UL; // self explanatory
 unsigned long apogee_time = 0UL; // the time of apogee as calculated by OpenRocket
 unsigned long launch_time = 0UL; // self explanatory
+double initial_altitude = 0.0;
 
 void setup() {
   // put your setup code here, to run once:
@@ -195,25 +195,45 @@ void setup() {
   Serial2.println("AT+PARAMETER=5,9,1,12"); //This should maximize data throughput; expected data rate of 62.5kbps (kilobits per second)
   Serial2.println("AT+MODE?");
 
+  //initial altitude to determine when to turn off data
+  sensor_read();
+  initial_altitude = altitude;
+
+
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
   delay(300000);
-  sensor_read();
-  record_data();
-  data_transmit();
+  if(rocket_state != 3){
+    sensor_read();
+    record_data();
+    data_transmit();
+  }
+
+  /*
+  case 0 - Launch detection code.
+    Determines if measured acceleration is equal to gravity +- an error margin.
+    If it is outside this range, it is presumed that the acceleration not being roughly equal to gravity means the rocket
+    is now accelerating under power, so rocket state variable is updated to switch to apogee detection logic.
+    The launch time is also set; it is needed for calculations in case/rocket state 1.
+  case 1 - Apogee detection code.
+    If statements were nested (instead of in line like the pseudo-code) to improve readability.
+    At apogee, it is expected that the only acceleration measured will be gravity, and the time will be roughly 
+    what OpenRocket predicted for apogee.
+  case 2 - "Landing" detection code.
+    Just added this (day prior to launch), but the idea is that if the rocket gets close to the ground,
+    it will turn off data recording, as the flight is over and a potential post-launch power off
+    might mess with the data recording process (in a not pleasent way)
+  case 3 - idle
+    This is just allows the flight computer to idle until power is turned off.
+         // this is a dummy case, so that the rocket does not execute any other code after triggering camera and parachute
+  */
 
   switch
     case 0:
       accel_strength = magnitude_accel();
-      /*
-      Launch detection code.
-      Determines if measured acceleration is equal to gravity +- an error margin.
-      If it is outside this range, it is presumed that the acceleration not being roughly equal to gravity means the rocket
-      is now accelerating under power, so rocket state variable is updated to switch to apogee detection logic.
-      The launch time is also set; it is needed for calculations in case/rocket state 2.
-      */
+
       if ( (accel_strength < (gravity - gravity_margin)) || (accel_strength > (gravity + gravity_margin)) ){
         Serial.print("Launch initiated!");
         launch_time = millis();
@@ -226,15 +246,8 @@ void loop() {
       time_since_launch = millis();
       //record_data();
       //data_transmit();
-      /* 
-      Apogee detection code.
-      If statements were nested (instead of in line like the pseudo-code) to improve readability.
-      At apogee, it is expected that the only acceleration measured will be gravity, and the time will be roughly 
-      what OpenRocket predicted for apogee.
-      */
       // Determines if measured acceleration falls within range of gravity +- an error margin.
       if ( (accel_strength >= (gravity - gravity_margin) && (accel_strength <= (gravity + gravity_margin)) ){
-
         // If acceleration is roughly equal to gravity, then checks if time falls within range of expected apogee time +- an error margin.
         // Ditching the margin system here as in theory it could just miss the window if the margin isn't set properly; better to trigger late then never...
         if (time_since_launch >= apogee_time){
@@ -246,10 +259,12 @@ void loop() {
       }
       break;
     case 2:
-      // this is a dummy case, so that the rocket does not execute any other code after triggering camera and parachute
+      if(altitude <= initial_altitude + 4){
+        rocket_state = 3; 
+      }
+    case 3:
       time_since_launch = millis();
       break;
-  
 
 }
 
