@@ -1,6 +1,6 @@
 // Need to confirm pin numbers on both ends
-#define LORA_UART_TX 10
-#define LORA_UART_RX 11
+#define LORA_UART_TX 16
+#define LORA_UART_RX 17
 
 // Sensor output variables
 double accel_x = 0.0, accel_y = 0.0, accel_z = 0.0;

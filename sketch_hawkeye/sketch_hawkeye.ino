@@ -198,15 +198,14 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-
+  delay(300000);
   sensor_read();
+  record_data();
+  data_transmit();
 
-
-  
   switch
     case 0:
       // Delay to allow for set up time
-      delay(300000);
       accel_strength = magnitude_accel();
       /*
       Launch detection code.
