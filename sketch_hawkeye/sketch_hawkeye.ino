@@ -295,13 +295,13 @@ void sensor_read(){
 
 void record_data(){
   //Recording sensor data to SD Card
-  appendFile(SD_MMC, "/datalog.txt", "a: "+accel_x+", "+accel_y+", "+accel_z+" gy: "+gyro_x+", "+gyro_y+", "+gyro_z+" mag: "+magno_x+", "+magno_y+", "+magno_z+" ");
+  appendFile(SD_MMC, "/datalog.txt", time_since_launch+"ms "+"a: "+accel_x+", "+accel_y+", "+accel_z+" gy: "+gyro_x+", "+gyro_y+", "+gyro_z+" mag: "+magno_x+", "+magno_y+", "+magno_z+" ");
   appendFile(SD_MMC, "/datalog.txt", "pressr: "+pressure+" "+" temp: "+temperature+" gps: "+altitude+", "+lat+", "+longi+"\n");
 }
 
 void data_transmit(){
   //Transmitting data to receiver
-  String data = String(accel_x)+","+String(accel_y)+","+String(accel_z)+","+String(gyro_x)+","+String(gyro_y)+","+String(gyro_z)+","+
+  String data = String(time_since_launch)+","+String(accel_x)+","+String(accel_y)+","+String(accel_z)+","+String(gyro_x)+","+String(gyro_y)+","+String(gyro_z)+","+
   String(magno_x)+","+String(magno_y)+","+String(magno_z)+","+String(altitude)+","+String(lat)+","+String(longi)+","+String(temperature)+","+String(pressure);
   String data_length = String(data.length());
   Serial2.println("AT+SEND=2,"+data_length+","+data);
