@@ -89,7 +89,7 @@ AltSoftSerial lora_serial(LORA_UART_TX, LORA_UART_RX);
 
 
 double gravity = 9.8; // acceleration due to gravity in m/s^2
-double gravity_margin = 0.0; // same thing as time margin, but for gravity
+double gravity_margin = 0.6; // same thing as time margin, but for gravity
 
 // Sensor output variables
   // NOTE: I do not know the units of any of the data coming out of the IMU at the moment.
@@ -106,7 +106,8 @@ float pressure = 0.0, temperature = 0.0; // Note that temperature is in Celsius 
 
 // State of rocket variables
 int rocket_state = 0; // 0 is on pad, 1 is in flight
-unsigned long time_margin = 0UL; // just a fudge/margin factor, as unlikely the esp32 will directly measure the exact time of apogee
+//unsigned long time_margin = 0UL; // just a fudge/margin factor, as unlikely the esp32 will directly measure the exact time of apogee
+//Deciding to forgoe time_margin because in theory might miss this window and late is better than never
 unsigned long time_since_launch = 0UL; // self explanatory
 unsigned long apogee_time = 0UL; // the time of apogee as calculated by OpenRocket
 unsigned long launch_time = 0UL; // self explanatory
@@ -205,7 +206,6 @@ void loop() {
 
   switch
     case 0:
-      // Delay to allow for set up time
       accel_strength = magnitude_accel();
       /*
       Launch detection code.
@@ -217,14 +217,15 @@ void loop() {
       if ( (accel_strength < (gravity - gravity_margin)) || (accel_strength > (gravity + gravity_margin)) ){
         Serial.print("Launch initiated!");
         launch_time = millis();
+        apogee_time = launch_time + 5800UL; //5800UL or 5.8 seconds is roughly the time the fuse should be triggered
         rocket_state = 1;
       }
       break;
     case 1:
       accel_strength = magnitude_accel();
-      time_since_launch = millis() - launch_time;
-      record_data();
-      data_transmit();
+      time_since_launch = millis();
+      //record_data();
+      //data_transmit();
       /* 
       Apogee detection code.
       If statements were nested (instead of in line like the pseudo-code) to improve readability.
@@ -235,11 +236,12 @@ void loop() {
       if ( (accel_strength >= (gravity - gravity_margin) && (accel_strength <= (gravity + gravity_margin)) ){
 
         // If acceleration is roughly equal to gravity, then checks if time falls within range of expected apogee time +- an error margin.
-        if( (time_since_launch >= (apogee_time - time_margin)) && (time_since_launch <= (apogee_time + time_margin)) ){
+        // Ditching the margin system here as in theory it could just miss the window if the margin isn't set properly; better to trigger late then never...
+        if (time_since_launch >= apogee_time){
           // trigger camera and parachute deployment mechanism
           Serial.print("Apogee detected!");
-          rocket_state = 2;
           digitalWrite(FUSE_TRIGGER_PIN, HIGH);
+          rocket_state = 2;
         }
       }
       break;
