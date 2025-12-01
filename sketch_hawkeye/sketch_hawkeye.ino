@@ -199,12 +199,13 @@ void setup() {
   sensor_read();
   initial_altitude = altitude;
 
+  delay(300000);
+
 
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  delay(300000);
   if(rocket_state != 3){
     sensor_read();
     record_data();
