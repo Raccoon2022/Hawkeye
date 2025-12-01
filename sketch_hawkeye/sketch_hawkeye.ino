@@ -231,11 +231,11 @@ void loop() {
          // this is a dummy case, so that the rocket does not execute any other code after triggering camera and parachute
   */
 
-  switch
+  switch (rocket_state) {
     case 0:
       accel_strength = magnitude_accel();
 
-      if ( (accel_strength < (gravity - gravity_margin)) || (accel_strength > (gravity + gravity_margin)) ){
+      if( (accel_strength < (gravity - gravity_margin)) || (accel_strength > (gravity + gravity_margin)) ){
         Serial.print("Launch initiated!");
         launch_time = millis();
         apogee_time = launch_time + 5800UL; //5800UL or 5.8 seconds is roughly the time the fuse should be triggered
@@ -248,10 +248,10 @@ void loop() {
       //record_data();
       //data_transmit();
       // Determines if measured acceleration falls within range of gravity +- an error margin.
-      if ( (accel_strength >= (gravity - gravity_margin) && (accel_strength <= (gravity + gravity_margin)) ){
+      if( (accel_strength >= (gravity - gravity_margin)) && (accel_strength <= (gravity + gravity_margin)) ){
         // If acceleration is roughly equal to gravity, then checks if time falls within range of expected apogee time +- an error margin.
         // Ditching the margin system here as in theory it could just miss the window if the margin isn't set properly; better to trigger late then never...
-        if (time_since_launch >= apogee_time){
+        if(time_since_launch >= apogee_time){
           // trigger camera and parachute deployment mechanism
           Serial.print("Apogee detected!");
           digitalWrite(FUSE_TRIGGER_PIN, HIGH);
@@ -266,6 +266,7 @@ void loop() {
     case 3:
       time_since_launch = millis();
       break;
+  }
 
 }
 
@@ -302,7 +303,7 @@ void sensor_read(){
   }
   if(gps.location.isUpdated()){
     lat = gps.location.lat();
-    longi = gps.location.longi();
+    longi = gps.location.lng();
   }
   if(gps.altitude.isUpdated()){
     altitude = gps.altitude.meters();
@@ -311,8 +312,8 @@ void sensor_read(){
 
 void record_data(){
   //Recording sensor data to SD Card
-  appendFile(SD_MMC, "/datalog.txt", time_since_launch+"ms "+"a: "+accel_x+", "+accel_y+", "+accel_z+" gy: "+gyro_x+", "+gyro_y+", "+gyro_z+" mag: "+magno_x+", "+magno_y+", "+magno_z+" ");
-  appendFile(SD_MMC, "/datalog.txt", "pressr: "+pressure+" "+" temp: "+temperature+" gps: "+altitude+", "+lat+", "+longi+"\n");
+  appendFile(SD_MMC, "/datalog.txt", String(time_since_launch)+"ms "+"a: "+String(accel_x)+", "+String(accel_y)+", "+String(accel_z)+" gy: "+String(gyro_x)+", "+String(gyro_y)+", "+String(gyro_z)+" mag: "+String(magno_x)+", "+String(magno_y)+", "+String(magno_z)+" ");
+  appendFile(SD_MMC, "/datalog.txt", "pressr: "+String(pressure)+" "+" temp: "+String(temperature)+" gps: "+String(altitude)+", "+String(lat)+", "+String(longi)+"\n");
 }
 
 void data_transmit(){

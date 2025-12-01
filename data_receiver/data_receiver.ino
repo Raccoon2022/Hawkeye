@@ -62,9 +62,9 @@ void loop() {
   rssi = msg.substring(keyPos[17]+1, keyPos[18]);
   snr = msg.substring(keyPos[18]+1);
 
-  Serial.println(time_since_launch+"ms "+"a: "+accel_x+", "+accel_y+", "+accel_z+" gy: "+gyro_x+", "+gyro_y+", "
-  +gyro_z+" mag: "+magno_x+", "+magno_y+", "+magno_z+" "+"pressr: "+pressure+" "+" temp: "+temperature
-  +" gps: "+altitude+", "+lat+", "+longi);
+  Serial.println(String(time_since_launch)+"ms "+"a: "+String(accel_x)+", "+String(accel_y)+", "+String(accel_z)
+  +" gy: "+String(gyro_x)+", "+String(gyro_y)+", "+String(gyro_z)+" mag: "+String(magno_x)+", "+String(magno_y)+", "+String(magno_z)+" "
+  +"pressr: "+String(pressure)+" "+" temp: "+String(temperature)+" gps: "+String(altitude)+", "+String(lat)+", "+String(longi));
   
 
 }
