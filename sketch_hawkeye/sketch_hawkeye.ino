@@ -263,6 +263,7 @@ void loop() {
       if(altitude <= initial_altitude + 4){
         rocket_state = 3; 
       }
+      break;
     case 3:
       time_since_launch = millis();
       break;
