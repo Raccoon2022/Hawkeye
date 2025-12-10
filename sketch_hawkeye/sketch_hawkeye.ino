@@ -116,7 +116,8 @@ void setup() {
   // put your setup code here, to run once:
   
   //Barometer set-up (following example found here: https://learn.adafruit.com/adafruit-bmp388-bmp390-bmp3xx/arduino)
-  Serial.begin(115200); // seems this is the same baud rate as the GPS library...that's nice
+  Serial.begin(115200); // seems this is the same baud rate as the GPS library...that's 
+  
   while(!Serial);
   //hardware I2C https://randomnerdtutorials.com/getting-started-freenove-esp32-wrover-cam/
   if(!bmp.begin_I2C()){
@@ -127,6 +128,7 @@ void setup() {
   bmp.setPressureOversampling(BMP3_OVERSAMPLING_4X);
   bmp.setIIRFilterCoeff(BMP3_IIR_FILTER_COEFF_3);
   bmp.setOutputDataRate(BMP3_ODR_50_HZ);
+  
 
   /*IMU set-up: 
   https://learn.sparkfun.com/tutorials/sparkfun-9dof-imu-icm-20948-breakout-hookup-guide
@@ -313,14 +315,74 @@ void sensor_read(){
 
 void record_data(){
   //Recording sensor data to SD Card
-  appendFile(SD_MMC, "/datalog.txt", String(time_since_launch)+"ms "+"a: "+String(accel_x)+", "+String(accel_y)+", "+String(accel_z)+" gy: "+String(gyro_x)+", "+String(gyro_y)+", "+String(gyro_z)+" mag: "+String(magno_x)+", "+String(magno_y)+", "+String(magno_z)+" ");
-  appendFile(SD_MMC, "/datalog.txt", "pressr: "+String(pressure)+" "+" temp: "+String(temperature)+" gps: "+String(altitude)+", "+String(lat)+", "+String(longi)+"\n");
+  String data = String(time_since_launch);
+  data.concat(",");
+  data.concat(accel_x);
+  data.concat(",");
+  data.concat(accel_y);
+  data.concat(",");
+  data.concat(accel_z);
+  data.concat(",");
+  data.concat(gyro_x);
+  data.concat(",");
+  data.concat(gyro_y);
+  data.concat(",");
+  data.concat(gyro_z);
+  data.concat(",");
+  data.concat(magno_x);
+  data.concat(",");
+  data.concat(magno_y);
+  data.concat(",");
+  data.concat(magno_z);
+  data.concat(altitude);
+  data.concat(",");
+  data.concat(lat);
+  data.concat(",");
+  data.concat(longi);
+  data.concat(",");
+  data.concat(temperature);
+  data.concat(",");
+  data.concat(pressure);
+  data.concat("\n");
+  char data_chr[data.length()];
+  data.toCharArray(data_chr, data.length());
+  appendFile(SD_MMC, "/datalog.txt", data_chr);
+  //appendFile(SD_MMC, "/datalog.txt", String(time_since_launch)+"ms "+"a: "+String(accel_x)+", "+String(accel_y)+", "+String(accel_z)+" gy: "+String(gyro_x)+", "+String(gyro_y)+", "+String(gyro_z)+" mag: "+String(magno_x)+", "+String(magno_y)+", "+String(magno_z)+" ");
+  //appendFile(SD_MMC, "/datalog.txt", "pressr: "+String(pressure)+" "+" temp: "+String(temperature)+" gps: "+String(altitude)+", "+String(lat)+", "+String(longi)+"\n");
 }
 
 void data_transmit(){
   //Transmitting data to receiver
-  String data = String(time_since_launch)+","+String(accel_x)+","+String(accel_y)+","+String(accel_z)+","+String(gyro_x)+","+String(gyro_y)+","+String(gyro_z)+","+
-  String(magno_x)+","+String(magno_y)+","+String(magno_z)+","+String(altitude)+","+String(lat)+","+String(longi)+","+String(temperature)+","+String(pressure);
+  String data = String(time_since_launch);
+  data.concat(",");
+  data.concat(accel_x);
+  data.concat(",");
+  data.concat(accel_y);
+  data.concat(",");
+  data.concat(accel_z);
+  data.concat(",");
+  data.concat(gyro_x);
+  data.concat(",");
+  data.concat(gyro_y);
+  data.concat(",");
+  data.concat(gyro_z);
+  data.concat(",");
+  data.concat(magno_x);
+  data.concat(",");
+  data.concat(magno_y);
+  data.concat(",");
+  data.concat(magno_z);
+  data.concat(altitude);
+  data.concat(",");
+  data.concat(lat);
+  data.concat(",");
+  data.concat(longi);
+  data.concat(",");
+  data.concat(temperature);
+  data.concat(",");
+  data.concat(pressure);
+
+  //String data0 = String(time_since_launch)+","+String(accel_x)+","+String(accel_y)+","+String(accel_z)+","+String(gyro_x)+","+String(gyro_y)+","+String(gyro_z)+","+String(magno_x)+","+String(magno_y)+","+String(magno_z)+","+String(altitude)+","+String(lat)+","+String(longi)+","+String(temperature)+","+String(pressure);
   String data_length = String(data.length());
   Serial2.println("AT+SEND=2,"+data_length+","+data);
 
