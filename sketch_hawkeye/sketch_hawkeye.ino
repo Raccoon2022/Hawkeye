@@ -36,7 +36,7 @@ Wireless data transmission
 #include <SoftwareSerial.h> // Supporting library for GPS
 #include "sd_read_write.h" // Onboard SD card libraries
 #include "SD_MMC.h"
-#include <AltSoftSerial.h>
+//#include <AltSoftSerial.h>
 /*
 NOTE: All libraries (except SPI which is a default Arduino library) must be installed for this to function properly
 */
@@ -58,8 +58,8 @@ NOTE: All libraries (except SPI which is a default Arduino library) must be inst
 //Defining ports for flexability reasons
 //#define I2C_SDA_PIN 0
 //#define I2C_SCL_PIN 1
-#define GPS_UART_TX 13
-#define GPS_UART_RX 15
+#define GPS_UART_TX 23
+#define GPS_UART_RX 34
 static const uint32_t GPSBaud = 4800;
 #define FUSE_TRIGGER_PIN 33
 //#define CAMERA_TRIGGER_TX 5 just going to run camera on it's own
@@ -80,7 +80,7 @@ Adafruit_BMP3XX bmp; // Warning: this is currently configured for HARDWARE I2C
 ICM_20948_I2C myICM;
 TinyGPSPlus gps;
 SoftwareSerial ss(GPS_UART_TX, GPS_UART_RX);
-AltSoftSerial lora_serial(LORA_UART_TX, LORA_UART_RX);
+//AltSoftSerial lora_serial(LORA_UART_TX, LORA_UART_RX);
 
 
 //Need to figure out how to setup SPI
@@ -192,6 +192,9 @@ void setup() {
   Serial2.begin(115200, SERIAL_8N1, LORA_UART_RX, LORA_UART_TX);
   //not adding delays here because why?
   Serial2.println("AT+ADDRESS=1");
+  while(Serial2.available()){
+    Serial.print(char(Serial2.read()));
+  }
   Serial2.println("AT+NETWORKID=5");
   Serial2.println("AT+BAND?");
   Serial2.println("AT+PARAMETER=5,9,1,12"); //This should maximize data throughput; expected data rate of 62.5kbps (kilobits per second)

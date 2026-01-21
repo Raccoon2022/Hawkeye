@@ -21,7 +21,7 @@ String altitude, lat, longi;
 String pressure, temperature;
 String time_since_launch;
 
-String msg;
+String msg = "*";
 String msg_values;
 String txID;
 String datalen;
@@ -31,6 +31,7 @@ int keyPos[25];
 
 void setup() {
   //Setting up wireless communication
+  Serial0.begin(115200);
   Serial2.begin(115200, SERIAL_8N1, LORA_UART_RX, LORA_UART_TX);
   //not adding delays here because why?
   Serial2.println("AT+ADDRESS=2");
@@ -50,7 +51,7 @@ void loop() {
   //msg_values = msg.substring(5); //Should only grab variable values, removing the +RCV= prefix
   //keyPos[0] = msg_values.indexOf(",");
   // 13 should be the number of commas, but doing 12 because already found one?
-  Serial.println(msg_values);
+  Serial0.println(msg_values);
   for(int i = 1; i <= 18; i++){
     keyPos[i] = msg.indexOf(",",keyPos[i-1]+1);
   }
@@ -89,8 +90,9 @@ void loop() {
   rssi = msg.substring(keyPos[17]+1, keyPos[18]);
   snr = msg.substring(keyPos[18]+1);
   
-  Serial.println(time_since_launch+"ms "+"a: "+accel_x+", "+accel_y+", "+accel_z+" (mg) "+"gyr: "+gyro_x+", "+gyro_y+", "+gyro_z+" (deg/s) "+"mag: "+magno_x+", "+magno_y+", "+magno_z+" (uT) "+"pressr: "+pressure+" (Pa) "+" temp: "+temperature+"°C"+"gps: "+altitude+"m"+", "+lat+"°N"+", "+longi+"°E");
+  //String data = time_since_launch+"ms "+"a: "+accel_x+", "+accel_y+", "+accel_z+" (mg) "+"gyr: "+gyro_x+", "+gyro_y+", "+gyro_z+" (deg/s) "+"mag: "+magno_x+", "+magno_y+", "+magno_z+" (uT) "+"pressr: "+pressure+" (Pa) "+" temp: "+temperature+"°C"+"gps: "+altitude+"m"+", "+lat+"°N"+", "+longi+"°E";
+  Serial0.println(time_since_launch+"ms "+"a: "+accel_x+", "+accel_y+", "+accel_z+" (mg) "+"gyr: "+gyro_x+", "+gyro_y+", "+gyro_z+" (deg/s) "+"mag: "+magno_x+", "+magno_y+", "+magno_z+" (uT) "+"pressr: "+pressure+" (Pa) "+" temp: "+temperature+"°C "+"gps: "+altitude+"m"+", "+lat+"°N"+", "+longi+"°E");
   //Serial.println(String(time_since_launch)+"ms "+"a: "+String(accel_x)+", "+String(accel_y)+", "+String(accel_z) +" gy: "+String(gyro_x)+", "+String(gyro_y)+", "+String(gyro_z)+" mag: "+String(magno_x)+", "+String(magno_y)+", "+String(magno_z)+" "+"pressr: "+String(pressure)+" "+" temp: "+String(temperature)+" gps: "+String(altitude)+", "+String(lat)+", "+String(longi));
-  
+  delay(50);
 
 }
