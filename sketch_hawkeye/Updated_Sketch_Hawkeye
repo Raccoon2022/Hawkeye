@@ -59,7 +59,7 @@ NOTE: All libraries (except SPI which is a default Arduino library) must be inst
 //#define I2C_SDA_PIN 0
 //#define I2C_SCL_PIN 1
 #define GPS_UART_TX 23
-#define GPS_UART_RX 15
+#define GPS_UART_RX 34
 static const uint32_t GPSBaud = 4800;
 #define FUSE_TRIGGER_PIN 33
 //#define CAMERA_TRIGGER_TX 5 just going to run camera on it's own
