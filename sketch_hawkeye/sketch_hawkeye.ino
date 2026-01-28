@@ -118,6 +118,7 @@ void setup() {
   //Barometer set-up (following example found here: https://learn.adafruit.com/adafruit-bmp388-bmp390-bmp3xx/arduino)
   Serial.begin(115200); // seems this is the same baud rate as the GPS library...that's 
   
+  
   while(!Serial);
   //hardware I2C https://randomnerdtutorials.com/getting-started-freenove-esp32-wrover-cam/
   if(!bmp.begin_I2C()){
@@ -128,6 +129,7 @@ void setup() {
   bmp.setPressureOversampling(BMP3_OVERSAMPLING_4X);
   bmp.setIIRFilterCoeff(BMP3_IIR_FILTER_COEFF_3);
   bmp.setOutputDataRate(BMP3_ODR_50_HZ);
+  
   
 
   /*IMU set-up: 
@@ -203,8 +205,8 @@ void setup() {
   //initial altitude to determine when to turn off data
   sensor_read();
   initial_altitude = altitude;
-
-  delay(300000);
+  //300,000
+  delay(3000);
 
 
 }
@@ -282,8 +284,10 @@ double magnitude_accel(){
 
 void sensor_read(){
   //Barometer data
+  /*
   pressure = bmp.readPressure();
   temperature = bmp.readTemperature();
+  */
 
     //IMU Data
   if(myICM.dataReady()){
