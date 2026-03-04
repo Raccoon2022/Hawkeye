@@ -6,6 +6,7 @@ Parts/Sensor List:
 -Sparkfun 9DoF IMU ICM-20948 (I2C & SPI available)
 -Using ESP32's on board SD card slot
 -"BMP390 Precision Barometric Pressure and Altimeter Sensor Upgrade Version for BMP280 BMP388 I2C SPI Interface+SH1.0mm 4P Cable"
+  -https://www.amazon.com/Geekstory-Precision-Barometric-Altimeter-Cable%EF%BC%88Pack/dp/B09CMJ9FJL 
 -HGLRC M100 Mini GPS (think this is the right model)
 -REYAX RYLR998 Transciever
 */
@@ -23,6 +24,7 @@ Wireless data transmission
   -https://projecthub.arduino.cc/Dziubym/how-to-use-rylr998-lora-module-with-arduino-496504 
   -https://github.com/bkolicoski/rylr998-lora-distance-test/blob/main/device_2/device_2.ino 
   -How to Use RYLR998 LoRa Modules with ESP32 https://www.youtube.com/watch?v=DOtZwD23ePQ
+  -https://reyax.com//upload/products_download/download_file/LoRa_AT_Command_RYLR998_RYLR498_EN.pdf 
 -Turn off data recording (switch to rocket state 2) when altitude is back at 0?
 */
 
@@ -30,6 +32,7 @@ Wireless data transmission
 #include "ICM_20948.h" // IMU library
 #include <Adafruit_Sensor.h> // Supporting library for pressure sensor
 #include "Adafruit_BMP3XX.h" // Pressure sensor library
+
 // #include <SPI.h> // communication library (deprecated)
 #include <Wire.h> // communication library
 #include <TinyGPSPlus.h> // GPS library
@@ -53,19 +56,35 @@ NOTE: All libraries (except SPI which is a default Arduino library) must be inst
 
 #define SEALEVELPRESSURE_HPA (1013.25)
 
-// #define SPI_PORT SPI
+
+//#define LORA
+//#define GPS
+//#define TESTING
+
+#ifdef LORA
+  #define LORA_UART_TX 32
+  #define LORA_UART_RX 27 
+#endif
+
+#ifdef GPS
+  #define GPS_UART_TX 26
+  #define GPS_UART_RX 25
+  static const uint32_t GPSBaud = 4800;
+#endif
+
+
 
 //Defining ports for flexability reasons
 //#define I2C_SDA_PIN 0
 //#define I2C_SCL_PIN 1
-#define GPS_UART_TX 23
-#define GPS_UART_RX 34
-static const uint32_t GPSBaud = 4800;
+
+
+
 #define FUSE_TRIGGER_PIN 33
 //#define CAMERA_TRIGGER_TX 5 just going to run camera on it's own
 //#define CAMERA_TRIGGER_RX 6
-#define LORA_UART_TX 27
-#define LORA_UART_RX 32
+
+
 
 // https://docs.freenove.com/projects/fnk0060/en/latest/fnk0060/codes/C/30_Read_and_Write_the_Sdcard.html
 // https://github.com/Freenove/Freenove_ESP32_WROVER_Board/blob/main/C/Sketches/Sketch_03.1_SDMMC_Test/Sketch_03.1_SDMMC_Test.ino
@@ -79,7 +98,7 @@ Adafruit_BMP3XX bmp; // Warning: this is currently configured for HARDWARE I2C
 //Adafruit_BMP3XX bmp(BMP_CS, BMP_MOSI, BMP_MISO, BMP_SCK);  // Software SPI
 ICM_20948_I2C myICM;
 TinyGPSPlus gps;
-SoftwareSerial ss(GPS_UART_TX, GPS_UART_RX);
+//SoftwareSerial ss(GPS_UART_TX, GPS_UART_RX);
 //AltSoftSerial lora_serial(LORA_UART_TX, LORA_UART_RX);
 
 
@@ -87,7 +106,7 @@ SoftwareSerial ss(GPS_UART_TX, GPS_UART_RX);
 
 
 
-double gravity = 9.8; // acceleration due to gravity in m/s^2
+double gravity = 10.0; // acceleration due to gravity in m/s^2; offset from 9.8 due to bias
 double gravity_margin = 0.6; // same thing as time margin, but for gravity
 
 // Sensor output variables
@@ -100,7 +119,10 @@ double accel_x = 0.0, accel_y = 0.0, accel_z = 0.0, accel_strength = 0.0;
 double gyro_x = 0.0, gyro_y = 0.0, gyro_z = 0.0; 
 double magno_x = 0.0, magno_y = 0.0, magno_z = 0.0;
 
-double altitude = 0.0, lat = 0.0, longi = 0.0; // gps values
+double altitude = 0.0;
+#ifdef GPS
+  double lat = 0.0, longi = 0.0; // gps values
+#endif
 float pressure = 0.0, temperature = 0.0; // Note that temperature is in Celsius and pressure is in Pascals (uncorrected)
 
 // State of rocket variables
@@ -111,17 +133,71 @@ unsigned long time_since_launch = 0UL; // self explanatory
 unsigned long apogee_time = 0UL; // the time of apogee as calculated by OpenRocket
 unsigned long launch_time = 0UL; // self explanatory
 double initial_altitude = 0.0;
+String ping;
+String rcv;
+int keyPos[8];
+
+//#define WIRE_PORT Wire  // Your desired Wire port.      Used when "USE_SPI" is not defined
+//#define AD0_VAL  1 
 
 void setup() {
   // put your setup code here, to run once:
   
   //Barometer set-up (following example found here: https://learn.adafruit.com/adafruit-bmp388-bmp390-bmp3xx/arduino)
   Serial.begin(115200); // seems this is the same baud rate as the GPS library...that's 
+  delay(1000);
+  //Wire.begin(21, 22);
+  //Wire.setPins(21, 22);
+  //Wire.begin(21, 22);
+  //Wire.setTimeout(1500);
+  //Wire.setClock(400000);
+  Wire.begin();
+  Wire.setClock(400000);
+  //Wire.beginTransmission(0x77);
+  //Wire.write(0x1B);
+  //Wire.write(0x33);
+  //Wire.endTransmission();
+
+  byte error, address;
+  int nDevices = 0;
+  for(address = 1; address < 127; address++){
+    Wire.beginTransmission(address);
+    error = Wire.endTransmission();
+    if(error == 0){
+      Serial.print("I2C device found at address 0x");
+      if (address<16){
+        Serial.print("0");
+      }
+      Serial.print(address,HEX);
+      Serial.println("  !");
+
+      nDevices++;
+    } else if (error == 4) {
+      Serial.print("Unknown error at address 0x");
+      if(address<16){ 
+        Serial.print("0");
+      }
+      Serial.println(address,HEX);
+    } else if(error == 3 || error == 2 || error == 1 || error == 5){
+      Serial.print("Error: ");
+      Serial.println(error);
+      Serial.println(address);
+    }
+    }
+    if (nDevices == 0){
+      Serial.println("No I2C devices found\n");
+    } else {
+    Serial.println("done\n");
+    }
   
   
+  uint8_t addr = 0x77;
+  //Wire1.begin(21, 22);
+  //bmp.begin_I2C(mailbox, &Wire1)
   while(!Serial);
+  //Serial.println("Adafruit BMP388 / BMP390 test");
   //hardware I2C https://randomnerdtutorials.com/getting-started-freenove-esp32-wrover-cam/
-  if(!bmp.begin_I2C()){
+  if(!bmp.begin_I2C(addr, &Wire)){
     Serial.println("Could not find a valid BMP3 sensor, check wiring!");
     while(1);
   }
@@ -131,6 +207,7 @@ void setup() {
   bmp.setOutputDataRate(BMP3_ODR_50_HZ);
   
   
+  
 
   /*IMU set-up: 
   https://learn.sparkfun.com/tutorials/sparkfun-9dof-imu-icm-20948-breakout-hookup-guide
@@ -138,9 +215,10 @@ void setup() {
   https://github.com/sparkfun/SparkFun_ICM-20948_ArduinoLibrary/blob/main/examples/Arduino/Example1_Basics/Example1_Basics.ino 
   */
   //hopefully starting the wire here doesn't cause issues
-  Wire.begin();
-  Wire.setClock(400000);
-  myICM.begin(Wire, 1);
+  
+  //Wire.begin(); // hopefully calling Wire.begin() a second time here doesn't cause issues
+  //Wire.setClock(400000);
+  //myICM.begin(Wire, 1);
   //bmp = 0x77 i2c address
   //imu = 0x69
   
@@ -156,10 +234,14 @@ void setup() {
       initialized = true;
     }
   }
+  
+  
 
   //GPS setup
-  ss.begin(GPSBaud);
+  //ss.begin(GPSBaud);
+  //Serial1.begin(GPSBaud, SERIAL_8N1, GPS_UART_RX, GPS_UART_TX);
 
+  
   //Onboard SD Card setup (pasted from GitHub repository)
   SD_MMC.setPins(SD_MMC_CLK, SD_MMC_CMD, SD_MMC_D0);
   if (!SD_MMC.begin("/sdcard", true, true, SDMMC_FREQ_DEFAULT, 5)) {
@@ -184,39 +266,73 @@ void setup() {
   }
 
   createDir(SD_MMC, "/datafiles");
-  writeFile(SD_MMC, "/datalog.txt", "test\n");
+  removeDir(SD_MMC, "/datafiles");
+  listDir(SD_MMC, "/", 0);
+  writeFile(SD_MMC, "/datalog.txt", "test");
+  readFile(SD_MMC, "/datalog.txt");
+  //writeFile(SD_MMC, "/datalog.txt", "test\n");
+  //delay(5000);
 
   // Setting up fuse trigger
   pinMode(FUSE_TRIGGER_PIN, OUTPUT);
 
   //Setting up wireless communication
-  //lora_serial.begin(115200);
+  // lora_serial.bein(115200)
+
+  /*
+  int8_t rx_pin = 32;
+  int8_t tx_pin = 27;
+  //Serial2.begin(115200, SERIAL_8N1, LORA_UART_RX, LORA_UART_TX);
+  Serial2.begin(115200, SERIAL_8N1, rx_pin, tx_pin);
+  */
+  #ifdef LORA
   Serial2.begin(115200, SERIAL_8N1, LORA_UART_RX, LORA_UART_TX);
+  //Serial.println("");
+  delay(5000);
   //not adding delays here because why?
-  Serial2.println("AT+ADDRESS=1");
-  while(Serial2.available()){
-    Serial.print(char(Serial2.read()));
-  }
-  Serial2.println("AT+NETWORKID=5");
-  Serial2.println("AT+BAND?");
-  Serial2.println("AT+PARAMETER=5,9,1,12"); //This should maximize data throughput; expected data rate of 62.5kbps (kilobits per second)
-  Serial2.println("AT+MODE?");
+  //sendCmd("AT+ADDRESS=1\n");
+  sendCmd("AT+ADDRESS=1");
+  delay(1000);
+  //Serial.println("b");
+  sendCmd("AT+NETWORKID=5");
+  delay(1000);
+  sendCmd("AT+BAND?");
+  delay(1000);
+  sendCmd("AT+PARAMETER=5,9,1,12"); //This should maximize data throughput; expected data rate of 62.5kbps (kilobits per second)
+  delay(1000);
+  sendCmd("AT+MODE?");
+  delay(5000);
+  #endif
 
   //initial altitude to determine when to turn off data
-  sensor_read();
+  sensorRead();
   initial_altitude = altitude;
-  //300,000
-  delay(3000);
+  Serial.println("sensor read yay!");
+  delay(10000); //300,000
 
 
 }
 
+#ifdef LORA
+void sendCmd(String cmd){
+  Serial2.println(cmd);
+  delay(500);
+  while(Serial2.available()){
+    //Serial.println(Serial2.read(), BIN);
+    Serial.print(char(Serial2.read()));
+  }
+}
+#endif
+
 void loop() {
   // put your main code here, to run repeatedly:
+  delay(1000);
   if(rocket_state != 3){
-    sensor_read();
+    sensorRead();
     record_data();
+    #ifdef LORA
     data_transmit();
+    #endif
   }
 
   /*
@@ -268,7 +384,9 @@ void loop() {
       break;
     case 2:
       if(altitude <= initial_altitude + 4){
+        #ifndef TESTING
         rocket_state = 3; 
+        #endif
       }
       break;
     case 3:
@@ -282,12 +400,18 @@ double magnitude_accel(){
   return sqrt(sq(accel_x) + sq(accel_y) + sq(accel_z));
 }
 
-void sensor_read(){
+void sensorRead(){
   //Barometer data
-  /*
+  Serial.println("Sensor Read Entry!");
+  if(!bmp.performReading()){
+    Serial.println("Failed to perform reading");
+    return;
+  }
   pressure = bmp.readPressure();
   temperature = bmp.readTemperature();
-  */
+  Serial.println("bmp success");
+  delay(10);
+  
 
     //IMU Data
   if(myICM.dataReady()){
@@ -296,9 +420,16 @@ void sensor_read(){
     // https://community.sparkfun.com/t/sparkfun-9dof-imu-breakout-icm-20948-compass/47457/2 
     // ? https://github.com/sparkfun/SparkFun_BNO080_Arduino_Library/issues/22 
     // https://jeremyclark.ca/wp/nav/icm20948-9dof-imu-on-arduino-uno/
+    /*
     accel_x = myICM.accX();
     accel_y = myICM.accY();
     accel_z = myICM.accZ();
+    */
+    
+    accel_x = (myICM.accX() / 1000.0) * 9.8;
+    accel_y = (myICM.accY() / 1000.0) * 9.8;
+    accel_z = (myICM.accZ() / 1000.0) * 9.8;
+    
     gyro_x = myICM.gyrX();
     gyro_y = myICM.gyrY();
     gyro_z = myICM.gyrZ();
@@ -306,11 +437,23 @@ void sensor_read(){
     magno_y = myICM.magY();
     magno_z = myICM.magZ();
   }
+  //accel_x = () * 9.8;
 
+  
   //GPS Data https://github.com/mikalhart/TinyGPSPlus/blob/master/examples/KitchenSink/KitchenSink.ino 
+  
+  #ifdef GPS
   while(ss.available() > 0){
     gps.encode(ss.read());
   }
+  
+  /*
+  while(Serial1.available() > 0)
+  {
+    gps.encode(char(Serial1.read()));
+  }
+  */
+  
   if(gps.location.isUpdated()){
     lat = gps.location.lat();
     longi = gps.location.lng();
@@ -318,11 +461,19 @@ void sensor_read(){
   if(gps.altitude.isUpdated()){
     altitude = gps.altitude.meters();
   }
+  #else 
+  altitude = bmp.readAltitude(SEALEVELPRESSURE_HPA);
+  #endif
+  
+  
 }
 
 void record_data(){
   //Recording sensor data to SD Card
+  //delay(1000);
   String data = String(time_since_launch);
+  data.concat(",");
+  data.concat(magnitude_accel());
   data.concat(",");
   data.concat(accel_x);
   data.concat(",");
@@ -341,15 +492,21 @@ void record_data(){
   data.concat(magno_y);
   data.concat(",");
   data.concat(magno_z);
+  data.concat(",");
   data.concat(altitude);
   data.concat(",");
+  #ifdef GPS
   data.concat(lat);
   data.concat(",");
   data.concat(longi);
   data.concat(",");
+  #endif
   data.concat(temperature);
   data.concat(",");
   data.concat(pressure);
+
+  Serial.println(data);
+
   data.concat("\n");
   char data_chr[data.length()];
   data.toCharArray(data_chr, data.length());
@@ -358,8 +515,62 @@ void record_data(){
   //appendFile(SD_MMC, "/datalog.txt", "pressr: "+String(pressure)+" "+" temp: "+String(temperature)+" gps: "+String(altitude)+", "+String(lat)+", "+String(longi)+"\n");
 }
 
+#ifdef LORA
 void data_transmit(){
   //Transmitting data to receiver
+  
+  /*
+  while(Serial2.available()){
+    rcv = Serial2.readString();
+    //Serial.println("T E S T");
+  }
+  
+  //while(Serial2.available() == 0){}
+  //rcv = Serial2.readString();
+  rcv.trim();
+  Serial.println("RCV: "+rcv);
+  for(int i = 1; i <= 4; i++){
+    keyPos[i] = rcv.indexOf(',',keyPos[i-1]+1);
+  }
+  ping = rcv.substring(keyPos[2] + 1, keyPos[3]);
+  if(ping.equals("1")){
+    String data = String(time_since_launch);
+    data.concat(",");
+    data.concat(accel_x);
+    data.concat(",");
+    data.concat(accel_y);
+    data.concat(",");
+    data.concat(accel_z);
+    data.concat(",");
+    data.concat(gyro_x);
+    data.concat(",");
+    data.concat(gyro_y);
+    data.concat(",");
+    data.concat(gyro_z);
+    data.concat(",");
+    data.concat(magno_x);
+    data.concat(",");
+    data.concat(magno_y);
+    data.concat(",");
+    data.concat(magno_z);
+    data.concat(",");
+    data.concat(altitude);
+    data.concat(",");
+    data.concat(lat);
+    data.concat(",");
+    data.concat(longi);
+    data.concat(",");
+    data.concat(temperature);
+    data.concat(",");
+    data.concat(pressure);
+
+    //String data0 = String(time_since_launch)+","+String(accel_x)+","+String(accel_y)+","+String(accel_z)+","+String(gyro_x)+","+String(gyro_y)+","+String(gyro_z)+","+String(magno_x)+","+String(magno_y)+","+String(magno_z)+","+String(altitude)+","+String(lat)+","+String(longi)+","+String(temperature)+","+String(pressure);
+    String data_length = String(data.length());
+    Serial2.println("AT+SEND=2,"+data_length+","+data);
+  }
+  Serial.println("Ping: "+ping);
+  */
+  
   String data = String(time_since_launch);
   data.concat(",");
   data.concat(accel_x);
@@ -379,6 +590,7 @@ void data_transmit(){
   data.concat(magno_y);
   data.concat(",");
   data.concat(magno_z);
+  data.concat(",");
   data.concat(altitude);
   data.concat(",");
   data.concat(lat);
@@ -388,9 +600,20 @@ void data_transmit(){
   data.concat(temperature);
   data.concat(",");
   data.concat(pressure);
+  
 
+  Serial.println(data);
+  //Serial.print(altitude+String(", "));
+  //Serial.print(lat+String(", "));
+  //Serial.println(longi);
+  
+  
   //String data0 = String(time_since_launch)+","+String(accel_x)+","+String(accel_y)+","+String(accel_z)+","+String(gyro_x)+","+String(gyro_y)+","+String(gyro_z)+","+String(magno_x)+","+String(magno_y)+","+String(magno_z)+","+String(altitude)+","+String(lat)+","+String(longi)+","+String(temperature)+","+String(pressure);
   String data_length = String(data.length());
   Serial2.println("AT+SEND=2,"+data_length+","+data);
+  
+
+  delay(300);
 
 }
+#endif

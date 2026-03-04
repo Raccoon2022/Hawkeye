@@ -35,15 +35,25 @@ void setup() {
   Serial2.begin(115200, SERIAL_8N1, LORA_UART_RX, LORA_UART_TX);
   //not adding delays here because why?
   Serial2.println("AT+ADDRESS=2");
+  delay(1000);
   Serial2.println("AT+NETWORKID=5");
+  delay(1000);
   Serial2.println("AT+BAND?");
+  delay(1000);
   Serial2.println("AT+PARAMETER=5,9,1,12"); //This should maximize data throughput; expected data rate of 62.5kbps (kilobits per second)
+  delay(1000);
   Serial2.println("AT+MODE?");
+  delay(5000);
 
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
+  String ping = "1";
+  String data_length = String(ping.length());
+  Serial2.println("AT+SEND=2,"+data_length+","+ping);
+
+
   while(Serial2.available()){
     msg = Serial2.readString();
   }
@@ -93,6 +103,9 @@ void loop() {
   //String data = time_since_launch+"ms "+"a: "+accel_x+", "+accel_y+", "+accel_z+" (mg) "+"gyr: "+gyro_x+", "+gyro_y+", "+gyro_z+" (deg/s) "+"mag: "+magno_x+", "+magno_y+", "+magno_z+" (uT) "+"pressr: "+pressure+" (Pa) "+" temp: "+temperature+"°C"+"gps: "+altitude+"m"+", "+lat+"°N"+", "+longi+"°E";
   Serial0.println(time_since_launch+"ms "+"a: "+accel_x+", "+accel_y+", "+accel_z+" (mg) "+"gyr: "+gyro_x+", "+gyro_y+", "+gyro_z+" (deg/s) "+"mag: "+magno_x+", "+magno_y+", "+magno_z+" (uT) "+"pressr: "+pressure+" (Pa) "+" temp: "+temperature+"°C "+"gps: "+altitude+"m"+", "+lat+"°N"+", "+longi+"°E");
   //Serial.println(String(time_since_launch)+"ms "+"a: "+String(accel_x)+", "+String(accel_y)+", "+String(accel_z) +" gy: "+String(gyro_x)+", "+String(gyro_y)+", "+String(gyro_z)+" mag: "+String(magno_x)+", "+String(magno_y)+", "+String(magno_z)+" "+"pressr: "+String(pressure)+" "+" temp: "+String(temperature)+" gps: "+String(altitude)+", "+String(lat)+", "+String(longi));
-  delay(50);
+  ping = "0";
+  Serial2.println("AT+SEND=2,"+data_length+","+ping);
+
+  delay(500);
 
 }
